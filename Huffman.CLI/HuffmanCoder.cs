@@ -229,17 +229,6 @@ public class HuffmanCoder : IHuffmanCoder
         return n.Left is null;
     }
 
-    private static void WriteBits(BitArray bits, BinaryWriter writer) {
-        byte[] bytes = ToByteArray(bits);
-        writer.Write(bytes);
-    }
-
-    private static byte[] ToByteArray(BitArray bits) {
-        byte[] bytes = new byte[(bits.Length - 1) / 8 + 1];
-        bits.CopyTo(bytes, 0);
-        return bytes;
-    }
-
     /// <summary>
     /// A debug method to display codex.
     /// Write to the debug window a list of pairs in this format: char:code\n 
