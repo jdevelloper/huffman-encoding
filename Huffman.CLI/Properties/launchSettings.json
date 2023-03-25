@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "compress": {
+      "commandName": "Project",
+      "commandLineArgs": "compress --input ../../../test-input.txt --overwrite"
+    },
+    "decompress": {
+      "commandName": "Project",
+      "commandLineArgs": "decompress --input ../../../test-input.txt.huf -o ../../../test-output.txt  --overwrite "
+    }
+  }
+}
