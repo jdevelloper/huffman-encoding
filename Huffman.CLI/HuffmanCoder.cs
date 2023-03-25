@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Text;
 
 namespace Huffman.CLI;
@@ -66,28 +65,25 @@ public class HuffmanCoder : IHuffmanCoder
         DebugWriteCodeArray(BuildCodeArray(huffmanTree));
         DebugAssertUniquePrefixes(BuildCodeArray(huffmanTree));
 
+        BitReader bitReader = new(reader);
         Node? node = huffmanTree;
-        while (!reader.EOF()) {
-            byte b = reader.ReadByte();
-            byte[] bytes = new byte[] { b };
-            BitArray bits = new(bytes);
-            for (int i = 0; i < bits.Length; i++) {
-                if (!bits[i]) {
-                    node = node.Left;
+
+        foreach (bool bit in bitReader) {
+            if (!bit) {
+                node = node.Left;
+            }
+            else {
+                node = node.Right;
+            }
+            if (node is null) {
+                throw new NullReferenceException("Node is null");
+            }
+            if (IsLeaf(node)) {
+                if (node.Symbol == TERMINATOR_CHAR) {
+                    return;
                 }
-                else {
-                    node = node.Right;
-                }
-                if (node is null) {
-                    throw new NullReferenceException("Node is null");
-                }
-                if (IsLeaf(node)) {
-                    if (node.Symbol == TERMINATOR_CHAR) {
-                        return;
-                    }
-                    writer.Write((byte)node.Symbol);
-                    node = huffmanTree; // restart at root
-                }
+                writer.Write((byte)node.Symbol);
+                node = huffmanTree; // restart at root
             }
         }
     }
