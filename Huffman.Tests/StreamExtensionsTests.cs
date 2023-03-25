@@ -1,6 +1,6 @@
 ﻿using Huffman.CLI;
 
-namespace Tests;
+namespace Huffman.Tests;
 
 public class StreamExtensionsTests
 {

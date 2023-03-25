@@ -37,38 +37,19 @@ public class HuffmanCoder : IHuffmanCoder
         DebugWriteCodeArray(codes);
         DebugAssertUniquePrefixes(codes);
 
-        const int BIT_ARRAY_LEN = 8;
-        BitArray bits = new(BIT_ARRAY_LEN);
-        int nextBitIndex = 0; // Invariant: set to the next available index, reset to 0 as it is written out.
-
+        using var bitWriter = new BitWriter(writer);
+        bool sentTerminator = false;
         reader.Restart();
-        var sentTerminator = false;
 
         while (!reader.EOF() || !sentTerminator) {
             short symbol = !reader.EOF() ? reader.ReadByte() : TERMINATOR_CHAR;
-            ConsumeSymbol(symbol);
-            sentTerminator = symbol == TERMINATOR_CHAR;
-        }
-
-        if (nextBitIndex > 0) {
-            for (int i = nextBitIndex; i < bits.Length; i++) {
-                bits[i] = false;
-            }
-            WriteBits(bits, writer);
-        }
-
-        // Loads symbol's code into bit buffer and writes & resets it when full.
-        void ConsumeSymbol(short symbol) {
             string codeString = codes[symbol] ?? throw new Exception($"Code string for ascii code {symbol} is null");
 
             foreach (char codeChar in codeString.ToCharArray()) {
-                if (nextBitIndex == bits.Length) {
-                    // bits buffer is full so write it & reset it.
-                    WriteBits(bits, writer);
-                    nextBitIndex = 0;
-                }
-                bits[nextBitIndex++] = codeChar is '1';
+                bitWriter.Write(codeChar is '1');
             }
+
+            sentTerminator = symbol == TERMINATOR_CHAR;
         }
     }
 
