@@ -61,59 +61,17 @@ public class HuffmanTests
         Assert.Equal(expectedText, got);
     }
 
-    [Fact]
-    public void Round_Trip_Matches_Empty_String() {
-        var text = string.Empty;
-        RoundTripMatches(text);
-    }
+    [Theory]
+    [InlineData("")]
+    [InlineData("a")]
+    [InlineData("aa")]
+    [InlineData("abb")]
+    [InlineData("aab")]
+    [InlineData(@"hello 
 
-    [Fact]
-    public void Round_Trip_Matches_With_1_Character() {
-        var text = "a";
-        RoundTripMatches(text);
-    }
-
-    [Fact]
-    public void Round_Trip_Matches_With_6_Characters_Distinct() {
-        var text = "abcdef";
-        RoundTripMatches(text);
-    }
-
-    [Fact]
-    public void Round_Trip_Matches_With_2_Duplicate_Characters() {
-        var text = "aa";
-        RoundTripMatches(text);
-    }
-
-    [Fact]
-    public void Round_Trip_Matches_With_All_Characters_Distinct() {
-        var text = "";
-        for (var i = 0; i < 256; i++) {
-            char c = (char)i;
-            if (c is >= ' ' and <= 'z') {
-                text += c;
-            }
-        }
-        RoundTripMatches(text);
-    }
-
-    [Fact]
-    public void Round_Trip_Matches_With_3_Characters_1_Duplicate_At_End() {
-        var text = "abb";
-        RoundTripMatches(text);
-    }
-
-    [Fact]
-    public void Round_Trip_Matches_With_3_Characters_1_Duplicate_At_Begining() {
-        var text = "aab";
-        RoundTripMatches(text);
-    }
-
-    [Fact]
-    public void Round_Trip_Matches_With_Line_Breaks() {
-        var text = @"hello 
-
-world";
+world")]
+    [MemberData(nameof(GetFullRangeOfBytes))]
+    public void Round_Trip_Matches(string text) {
         RoundTripMatches(text);
     }
 
@@ -128,6 +86,26 @@ world";
         }
 
         RoundTripMatches(sb.ToString(), expectedCompressionPercent);
+    }
+
+    public static IEnumerable<object[]> GetFullRangeOfBytes() {
+        {// visible characters
+            var text = "";
+            for (var i = 0; i < 256; i++) {
+                char c = (char)i;
+                if (c is >= ' ' and <= 'z') {
+                    text += c;
+                }
+            }
+            yield return new object[] { text };
+        }
+        {// all possible values
+            var text = "";
+            for (var i = 0; i < 256; i++) {
+                text += (char)i;
+            }
+            yield return new object[] { text };
+        }
     }
 
     private void RoundTripMatches(string sourceText, float? expectedCompressionThreshold = null) {

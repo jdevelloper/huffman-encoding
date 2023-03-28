@@ -5,10 +5,13 @@ namespace Huffman.Tests;
 
 public class BitReaderTests
 {
-    [Fact]
-    public void BitReader_Enumerates_Bits_Correctly() {
+    [Theory]
+    [InlineData(new byte[] { 0xFF, 0x00, 0x0F, })]
+    [InlineData(new byte[] { 0xFF, 0x00, 0x0F, 0xF0, 0xFF, 0x00, 0x0F, 0xF0, })]
+    [InlineData(new byte[] { 0xFF, })]
+    [InlineData(new byte[] { })]
+    public void BitReader_Enumerates_Bits_Correctly(byte[] testData) {
         // Arrange
-        byte[] testData = { 0xFF, 0x00, 0x0F };
         var stream = new MemoryStream(testData);
         var reader = new BinaryReader(stream);
         var bitReader = new BitReader(reader);
