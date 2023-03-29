@@ -5,7 +5,7 @@ using Xunit.Sdk;
 
 namespace Huffman.Tests;
 
-public class HuffmanTests
+public class HuffmanEncoderTests
 {
     private readonly ITestOutputHelper _output;
     private readonly string _helloText = "hello world";
@@ -15,14 +15,14 @@ public class HuffmanTests
         0, 111, 0, 1, 0, 0, 0, 114, 0, 1, 0, 0, 0, 119, 0, 1, 0, 0,
         0, 0, 1, 4, 0, 0, 0, 105, 101, 142, 242, 23, };
 
-    public HuffmanTests(ITestOutputHelper output) {
+    public HuffmanEncoderTests(ITestOutputHelper output) {
         _output = output;
     }
 
     [Fact]
     public void Compress_Returns_Correct_Result() {
         // Arrange
-        var sut = new HuffmanCoder();
+        var sut = new HuffmanEncoder();
         var input = new BinaryReader(new MemoryStream(Encoding.UTF8.GetBytes(_helloText)));
         var expectedBytes = _helloCompressedSnapshot;
         var resultStream = new MemoryStream();
@@ -46,7 +46,7 @@ public class HuffmanTests
     [Fact]
     public void Decompress_Returns_Correct_Result() {
         // Arrange
-        var sut = new HuffmanCoder();
+        var sut = new HuffmanEncoder();
         var input = new BinaryReader(new MemoryStream(_helloCompressedSnapshot));
         var expectedText = _helloText;
         var resultStream = new MemoryStream();
@@ -117,7 +117,7 @@ world")]
 
         // Act
         {
-            var sut = new HuffmanCoder();
+            var sut = new HuffmanEncoder();
             var sourceBytes = Encoding.UTF8.GetBytes(sourceText);
             sourceLength = sourceBytes.Length;
             var reader = new BinaryReader(new MemoryStream(sourceBytes));
@@ -128,7 +128,7 @@ world")]
             compressedLength = intermediateCompressResult.Length;
         }
         {
-            var sut = new HuffmanCoder();
+            var sut = new HuffmanEncoder();
             var reader = new BinaryReader(new MemoryStream(intermediateCompressResult));
             var resultStream = new MemoryStream();
             var writer = new BinaryWriter(resultStream);

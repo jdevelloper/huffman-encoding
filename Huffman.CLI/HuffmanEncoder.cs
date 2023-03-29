@@ -3,18 +3,8 @@ using System.Text;
 
 namespace Huffman.CLI;
 
-public class HuffmanCoder : IHuffmanCoder
+internal class HuffmanEncoder : IEncoder
 {
-    /// <summary>
-    /// MAX_CHAR is one more than typical to store a terminator in last position.
-    /// We use short instread of byte to reeserve this slot for the terminator.
-    /// </summary>
-    private static readonly short MAX_CHAR = 1 << sizeof(byte) * 8;
-    /// <summary>
-    /// The terminator is represented in the counts, and its code signals the end of the compressed data.
-    /// </summary>
-    private static readonly short TERMINATOR_CHAR = MAX_CHAR;
-
     private record class Node(
         int Count,
         short Symbol = default,
@@ -25,12 +15,14 @@ public class HuffmanCoder : IHuffmanCoder
     /// Compresses the given string using Huffman coding and returns the compressed result as a byte array.
     /// </summary>
     public void Compress(BinaryReader reader, BinaryWriter writer) {
-        int[] counts = BuildCountsFromSource(reader);
+        int[] counts = ByteCounts.Analyze(reader);
+        AddTerminatorToCounts(counts);
+        short terminator = GetTerminatorSymbol(counts);
 
-        SerializeCounts(counts, writer);
+        ByteCounts.Serialize(counts, writer);
 
         Node huffmanTree = BuildHuffmanTree(counts);
-        string?[] codes = BuildCodeArray(huffmanTree);
+        string?[] codes = BuildCodes(huffmanTree, counts.Length);
 
         // Some debug-only code
         DebugWriteCodeArray(codes);
@@ -41,14 +33,13 @@ public class HuffmanCoder : IHuffmanCoder
         reader.Restart();
 
         while (!reader.EOF() || !sentTerminator) {
-            short symbol = !reader.EOF() ? reader.ReadByte() : TERMINATOR_CHAR;
+            short symbol = !reader.EOF() ? reader.ReadByte() : terminator;
             string codeString = codes[symbol] ?? throw new Exception($"Code string for ascii code {symbol} is null");
 
             foreach (char codeChar in codeString.ToCharArray()) {
                 bitWriter.Write(codeChar is '1');
             }
-
-            sentTerminator = symbol == TERMINATOR_CHAR;
+            sentTerminator = symbol == terminator;
         }
     }
 
@@ -57,13 +48,14 @@ public class HuffmanCoder : IHuffmanCoder
     /// and returns the decompressed result in the writer stream.
     /// </summary>
     public void Decompress(BinaryReader reader, BinaryWriter writer) {
-        int[] counts = DeserializeCounts(reader);
+        int[] counts = ByteCounts.Deserialize(reader);
+        short terminator = GetTerminatorSymbol(counts);
 
         Node huffmanTree = BuildHuffmanTree(counts);
 
         // Displays a code table in debug mode.
-        DebugWriteCodeArray(BuildCodeArray(huffmanTree));
-        DebugAssertUniquePrefixes(BuildCodeArray(huffmanTree));
+        DebugWriteCodeArray(BuildCodes(huffmanTree, counts.Length));
+        DebugAssertUniquePrefixes(BuildCodes(huffmanTree, counts.Length));
 
         BitReader bitReader = new(reader);
         Node? node = huffmanTree;
@@ -79,7 +71,7 @@ public class HuffmanCoder : IHuffmanCoder
                 throw new NullReferenceException("Node is null");
             }
             if (IsLeaf(node)) {
-                if (node.Symbol == TERMINATOR_CHAR) {
+                if (node.Symbol == terminator) {
                     return;
                 }
                 writer.Write((byte)node.Symbol);
@@ -89,48 +81,21 @@ public class HuffmanCoder : IHuffmanCoder
     }
 
     /// <summary>
-    /// Serializes count array into writer stream, delimiting start 
-    /// and end with a value that is beyond any existing count or frequency.
+    /// The terminator is represented in the counts, and its code signals the end of the compressed data.
     /// </summary>
-    /// <param name="counts">indexes represent characters, values are counts of those characters</param>
-    /// <param name="writer"></param>
-    private static void SerializeCounts(int[] counts, BinaryWriter writer) {
-        int delimiter = counts.Max() + 1;
-
-        // Announce delimiter by being first in stream.
-        writer.Write(delimiter);
-
-        foreach (short c in GetPossibleChars()) {
-            if (counts[c] != 0) {
-                writer.Write(counts[c]);
-                writer.Write(c);
-            }
-        }
-
-        // Now use delimiter
-        writer.Write(delimiter);
+    private static void AddTerminatorToCounts(int[] counts) {
+        // We will encode a 'special' terminating character
+        // so that we can encode an end of data mark.
+        // It must be outside the range of a byte; it is 256, the last possition in the array.
+        short terminator = GetTerminatorSymbol(counts);
+        ref int terminatorCount = ref counts[terminator];
+        Debug.Assert(terminatorCount is 0, "The last spot in the counts array must be reserved for terminator");
+        terminatorCount++;
     }
 
-    private static int[] DeserializeCounts(BinaryReader reader) {
-        // First bits are a delimiter int.
-        // Then pairs of count and character (represented as int and short),
-        // End when we see delimiter again.
-        try {
-            int[] counts = new int[MAX_CHAR + 1];
-            int delimiter = reader.ReadInt32();
-
-            while (true) {
-                int count = reader.ReadInt32();
-                if (count == delimiter) {
-                    return counts;
-                }
-                short character = reader.ReadInt16();
-                counts[character] = count;
-            }
-        }
-        catch (Exception ex) {
-            throw new Exception("Could not deserialize counts.", ex);
-        }
+    private static short GetTerminatorSymbol(int[] counts) {
+        // last position represents the terminator character
+        return (short)(counts.Length - 1);
     }
 
     /// <summary>
@@ -141,7 +106,7 @@ public class HuffmanCoder : IHuffmanCoder
         PriorityQueue<Node, int> queue = new();
 
         queue.EnqueueRange(
-            from c in GetPossibleChars()
+            from c in GetPossibleChars(counts)
             where counts[c] > 0
             select new Node(Count: counts[c], Symbol: c) into node
             select (node, node.Count)
@@ -170,31 +135,14 @@ public class HuffmanCoder : IHuffmanCoder
     }
 
     /// <summary>
-    /// Builds and returns a count array from a source stream, counting the occurences of each character.
-    /// </summary>
-    /// <param name="reader"></param>
-    /// <returns>indexes are characters(ints), values are counts of those characters</returns>
-    private static int[] BuildCountsFromSource(BinaryReader reader) {
-        int[] counts = new int[MAX_CHAR + 1];
-        while (!reader.EOF()) {
-            byte b = reader.ReadByte();
-            counts[b]++;
-        }
-        // We will encode a 'special' terminating character
-        // so that we can encode an end of data mark.
-        counts[TERMINATOR_CHAR]++;
-        return counts;
-    }
-
-    /// <summary>
     /// Builds a lookup table for encoding a byte into the bit code. 
     /// For this intermediate representation, bits are strings like "1010". 
     /// If the string is null, then its corresponding byte is not present in the source.
     /// </summary>
     /// <param name="huffmanTree">The root node</param>
     /// <returns>indexes are characters(bytes), values are counts of those characters</returns>
-    private static string?[] BuildCodeArray(Node huffmanTree) {
-        string?[] codes = new string?[MAX_CHAR + 1];
+    private static string?[] BuildCodes(Node huffmanTree, int size) {
+        string?[] codes = new string?[size];
 
         void Traverse(Node n, string code) {
             if (n.Left is null) {
@@ -215,8 +163,8 @@ public class HuffmanCoder : IHuffmanCoder
     /// Enumerates all potential byte values ending with 
     /// the reserved value out side of byte range.
     /// </summary>
-    private static IEnumerable<short> GetPossibleChars() {
-        for (short i = 0; i <= MAX_CHAR; i++) {
+    private static IEnumerable<short> GetPossibleChars(int[] counts) {
+        for (short i = 0; i < counts.Length; i++) {
             yield return i;
         }
     }
@@ -232,11 +180,12 @@ public class HuffmanCoder : IHuffmanCoder
     /// <param name="codes">Codes where indexes are keys and values are resulting codes.</param>
     [Conditional("DEBUG")]
     private static void DebugWriteCodeArray(string?[] codes) {
+        short terminator = (short)(codes.Length - 1); // last position represents the terminator character
         StringBuilder sb = new();
         for (short i = 0; i < codes.Length; i++) {
             if (codes[i] is not null) {
                 string displayChar = "0x" + i.ToString("X2");
-                if (i == TERMINATOR_CHAR) {
+                if (i == terminator) {
                     displayChar += " ";
                 }
                 else {

@@ -4,14 +4,14 @@ using System.Text;
 
 namespace Huffman.CLI;
 
-public class CommandLineParser
+internal class CommandLineParser
 {
     private const string DEFAULT_ENCODED_EXTENSION = ".huf";
-    private readonly IHuffmanCoder _huffmanCoder;
+    private readonly IEncoder _encoder;
     private readonly IFileSystem _fileSystem;
 
-    public CommandLineParser(IHuffmanCoder huffmanCoder, IFileSystem fileSystem) {
-        _huffmanCoder = huffmanCoder;
+    public CommandLineParser(IEncoder encoder, IFileSystem fileSystem) {
+        _encoder = encoder;
         _fileSystem = fileSystem;
     }
 
@@ -106,7 +106,7 @@ public class CommandLineParser
         using var outFileStream = outFile.OpenWrite();
         using var reader = new BinaryReader(inFileStream); // need to read char by char
         using var writer = new BinaryWriter(outFileStream, Encoding.UTF8, false);
-        _huffmanCoder.Compress(reader, writer);
+        _encoder.Compress(reader, writer);
     }
 
     private void DecompressFile(IFileInfo inFile, IFileInfo outFile) {
@@ -114,7 +114,7 @@ public class CommandLineParser
         using var outFileStream = outFile.OpenWrite();
         using var reader = new BinaryReader(inFileStream);
         using var writer = new BinaryWriter(outFileStream);
-        _huffmanCoder.Decompress(reader, writer);
+        _encoder.Decompress(reader, writer);
     }
 }
 

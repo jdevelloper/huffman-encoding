@@ -1,6 +1,6 @@
 ﻿namespace Huffman.CLI;
 
-public class BitWriter : IDisposable
+internal class BitWriter : IDisposable
 {
     private int _bufferedCount = 0;
     private byte _bufferBits = default;

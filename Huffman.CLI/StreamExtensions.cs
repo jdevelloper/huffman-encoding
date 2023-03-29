@@ -1,6 +1,6 @@
 ﻿namespace Huffman.CLI;
 
-public static class StreamExtensions
+internal static class StreamExtensions
 {
     /// <summary>
     /// EOF indicates the end of the stream.

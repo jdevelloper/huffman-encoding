@@ -23,9 +23,9 @@ public class CommandLineParserTests
     [Fact]
     public void CompressHandler_Throws_When_File_Exists_And_No_Overwrite() {
         // Arrange
-        var mockHuffman = new Mock<IHuffmanCoder>();
+        var mockEncoder = new Mock<IEncoder>();
         var mockFileSystem = new MockFileSystem();
-        var sut = new CommandLineParser(mockHuffman.Object, mockFileSystem);
+        var sut = new CommandLineParser(mockEncoder.Object, mockFileSystem);
         mockFileSystem.AddFile(_existingOutputFileName, "");
 
         // Act & Assert
@@ -38,9 +38,9 @@ public class CommandLineParserTests
     [Fact]
     public void DecompressHandler_Throws_When_File_Exists_And_No_Overwrite() {
         // Arrange
-        var mockHuffman = new Mock<IHuffmanCoder>();
+        var mockEncoder = new Mock<IEncoder>();
         var mockFileSystem = new MockFileSystem();
-        var sut = new CommandLineParser(mockHuffman.Object, mockFileSystem);
+        var sut = new CommandLineParser(mockEncoder.Object, mockFileSystem);
         mockFileSystem.AddFile(_existingOutputFileName, "");
 
         // Act & Assert
@@ -53,9 +53,9 @@ public class CommandLineParserTests
     [Fact]
     public void CreateCommandLineParser_Returns_RootCommand_With_Subcommands() {
         // Arrange
-        var mockHuffman = new Mock<IHuffmanCoder>();
+        var mockEncoder = new Mock<IEncoder>();
         var mockFileSystem = new MockFileSystem();
-        var sut = new CommandLineParser(mockHuffman.Object, mockFileSystem);
+        var sut = new CommandLineParser(mockEncoder.Object, mockFileSystem);
 
         // Act
         var result = sut.CreateCommandLineParser();
@@ -69,9 +69,9 @@ public class CommandLineParserTests
     [Fact]
     public void CompressHandler_Creates_Output_File_And_Calls_Compress() {
         // Arrange
-        var mockHuffman = new Mock<IHuffmanCoder>();
+        var mockEncoder = new Mock<IEncoder>();
         var mockFileSystem = new MockFileSystem();
-        var sut = new CommandLineParser(mockHuffman.Object, mockFileSystem);
+        var sut = new CommandLineParser(mockEncoder.Object, mockFileSystem);
         var inFileName = _textFileName;
         var outFileName = Path.Combine(_testDirectory, $"output-{Guid.NewGuid()}.huf");
 
@@ -81,7 +81,7 @@ public class CommandLineParserTests
         sut.CompressHandler(inFileName, outFileName, overwrite: false);
 
         // Assert
-        mockHuffman.Verify(x => x.Compress(It.IsAny<BinaryReader>(), It.IsAny<BinaryWriter>()));
+        mockEncoder.Verify(x => x.Compress(It.IsAny<BinaryReader>(), It.IsAny<BinaryWriter>()));
 
         var newFile = mockFileSystem.GetFile(outFileName);
         Assert.NotNull(newFile);
@@ -90,9 +90,9 @@ public class CommandLineParserTests
     [Fact]
     public void DecompressHandler_Creates_Output_File_And_Calls_Decompress() {
         // Arrange
-        var mockHuffman = new Mock<IHuffmanCoder>();
+        var mockEncoder = new Mock<IEncoder>();
         var mockFileSystem = new MockFileSystem();
-        var sut = new CommandLineParser(mockHuffman.Object, mockFileSystem);
+        var sut = new CommandLineParser(mockEncoder.Object, mockFileSystem);
         var inFileName = _compressedFileName;
         var outFileName = Path.Combine(_testDirectory, $"output-{Guid.NewGuid()}.txt");
 
@@ -102,7 +102,7 @@ public class CommandLineParserTests
         sut.DecompressHandler(inFileName, outFileName, overwrite: false);
 
         // Assert
-        mockHuffman.Verify(x => x.Decompress(It.IsAny<BinaryReader>(), It.IsAny<BinaryWriter>()));
+        mockEncoder.Verify(x => x.Decompress(It.IsAny<BinaryReader>(), It.IsAny<BinaryWriter>()));
 
         var newFile = mockFileSystem.GetFile(outFileName);
         Assert.NotNull(newFile);

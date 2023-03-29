@@ -2,7 +2,7 @@
 
 namespace Huffman.CLI;
 
-public class BitReader : IEnumerable<bool>
+internal class BitReader : IEnumerable<bool>
 {
     private readonly BinaryReader _reader;
 
